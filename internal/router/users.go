@@ -3,6 +3,7 @@ package router
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,11 +15,13 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Name      string    `json:"name"`
+	Apikey    string    `json:"api_key"`
 }
 
 func databaseUserToUser(user database.User) User {
 	return User{
 		ID:        user.ID,
+		Apikey:    user.Apikey,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Name:      user.Name,
@@ -48,6 +51,23 @@ func (cfg *ApiConfig) handlePostUsers(w http.ResponseWriter, r *http.Request) {
 	dbUser, err := cfg.DB.CreateUser(r.Context(), params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't create user")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, databaseUserToUser(dbUser))
+}
+
+func (cfg *ApiConfig) handleGetUsers(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithError(w, http.StatusUnauthorized, "Authorization header missing")
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "ApiKey ")
+	dbUser, err := cfg.DB.GetUserByApikey(r.Context(), tokenString)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid ApiKey")
 		return
 	}
 

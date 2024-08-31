@@ -27,6 +27,7 @@ func Router(cfg ApiConfig) {
 
 	mux.HandleFunc("GET /api/healthz", handleReadiness)
 	mux.HandleFunc("GET /v1/err", handleErr)
+	mux.Handle("GET /v1/users", logger(http.HandlerFunc(cfg.handleGetUsers)))
 	mux.Handle("POST /v1/users", logger(http.HandlerFunc(cfg.handlePostUsers)))
 
 	fmt.Printf("Server listening on %s\n", port)
