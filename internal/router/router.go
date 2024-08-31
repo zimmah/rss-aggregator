@@ -10,7 +10,9 @@ import (
 )
 
 type ApiConfig struct {
-	DB *database.Queries
+	DB     *database.Queries
+	apiKey string
+	user   User
 }
 
 func Router(cfg ApiConfig) {
@@ -27,8 +29,16 @@ func Router(cfg ApiConfig) {
 
 	mux.HandleFunc("GET /api/healthz", handleReadiness)
 	mux.HandleFunc("GET /v1/err", handleErr)
-	mux.Handle("GET /v1/users", logger(http.HandlerFunc(cfg.handleGetUsers)))
+
+	mux.Handle("GET /v1/users", logger(cfg.auth(http.HandlerFunc(cfg.handleGetUsers))))
 	mux.Handle("POST /v1/users", logger(http.HandlerFunc(cfg.handlePostUsers)))
+
+	mux.Handle("GET /v1/feeds", logger(http.HandlerFunc(cfg.handleGetFeeds)))
+	mux.Handle("POST /v1/feeds", logger(cfg.auth(http.HandlerFunc(cfg.handlePostFeeds))))
+
+	mux.Handle("GET /v1/feed_follows", logger(cfg.auth(http.HandlerFunc(cfg.handleGetFeedFollows))))
+	mux.Handle("POST /v1/feed_follows", logger(cfg.auth(http.HandlerFunc(cfg.handlePostFeedFollows))))
+	mux.Handle("DELETE /v1/feed_follows/{feedFollowID}", logger(cfg.auth(http.HandlerFunc(cfg.handleDeleteFeedFollowByID))))
 
 	fmt.Printf("Server listening on %s\n", port)
 	log.Fatal(server.ListenAndServe())

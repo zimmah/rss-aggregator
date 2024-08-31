@@ -3,7 +3,6 @@ package router
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,22 +53,9 @@ func (cfg *ApiConfig) handlePostUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, databaseUserToUser(dbUser))
+	respondWithJSON(w, http.StatusCreated, databaseUserToUser(dbUser))
 }
 
 func (cfg *ApiConfig) handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		respondWithError(w, http.StatusUnauthorized, "Authorization header missing")
-		return
-	}
-
-	tokenString := strings.TrimPrefix(authHeader, "ApiKey ")
-	dbUser, err := cfg.DB.GetUserByApikey(r.Context(), tokenString)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Invalid ApiKey")
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, databaseUserToUser(dbUser))
+	respondWithJSON(w, http.StatusOK, cfg.user)
 }
