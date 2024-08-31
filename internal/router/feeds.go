@@ -1,6 +1,7 @@
 package router
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -10,12 +11,13 @@ import (
 )
 
 type Feed struct {
-	ID        uuid.UUID `json:"id"`
-	UserID    uuid.UUID `json:"user_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Name      string    `json:"name"`
-	URL       string    `json:"url"`
+	ID            uuid.UUID  `json:"id"`
+	UserID        uuid.UUID  `json:"user_id"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	LastFetchedAt *time.Time `json:"last_fetched_at"`
+	Name          string     `json:"name"`
+	URL           string     `json:"url"`
 }
 
 type FeedAndFeedFollow struct {
@@ -23,14 +25,24 @@ type FeedAndFeedFollow struct {
 	FeedFollow FeedFollow `json:"feed_follow"`
 }
 
-func databaseFeedToFeed(feed database.Feed) Feed {
-	return Feed{
-		ID:        feed.ID,
-		CreatedAt: feed.CreatedAt,
-		UpdatedAt: feed.UpdatedAt,
-		Name:      feed.Name,
-		UserID:    feed.UserID,
-		URL:       feed.Url,
+func databaseFeedToFeed(dbFeed database.Feed) Feed {
+	feed := Feed{
+		ID:        dbFeed.ID,
+		CreatedAt: dbFeed.CreatedAt,
+		UpdatedAt: dbFeed.UpdatedAt,
+		Name:      dbFeed.Name,
+		UserID:    dbFeed.UserID,
+		URL:       dbFeed.Url,
+	}
+	feed.SetLastFetchedAt(dbFeed.LastFetchedAt)
+	return feed
+}
+
+func (f *Feed) SetLastFetchedAt(nt sql.NullTime) {
+	if nt.Valid {
+		f.LastFetchedAt = &nt.Time
+	} else {
+		f.LastFetchedAt = nil
 	}
 }
 
@@ -90,5 +102,9 @@ func (cfg *ApiConfig) handleGetFeeds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(feeds) == 0 {
+		respondWithError(w, http.StatusNotFound, "No feeds found for this user")
+		return
+	}
 	respondWithJSON(w, http.StatusOK, feeds)
 }

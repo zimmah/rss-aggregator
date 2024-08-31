@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/zimmah/rss-aggregator/internal/database"
 	"github.com/zimmah/rss-aggregator/internal/router"
+	"github.com/zimmah/rss-aggregator/internal/scraper"
 )
 
 func main() {
@@ -34,5 +36,9 @@ func main() {
 		DB: queries,
 	}
 
-	router.Router(config)
+	const collectionConcurrency = 10
+	const collectionInterval = time.Minute
+	go scraper.StartWorker(queries, collectionConcurrency, collectionInterval)
+
+	router.Router(&config)
 }
